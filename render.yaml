@@ -1,0 +1,10 @@
+# Render.com Blueprint — deploys GHOST NET from this repo as a Docker web
+# service. In the Render dashboard: New + → Blueprint → pick this repo.
+services:
+  - type: web
+    name: ghost-net
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /healthz
+    autoDeploy: true

@@ -1,0 +1,9 @@
+**/node_modules
+web/dist
+server/ghostnet
+server/ghostnet.exe
+server/data
+**/test-results
+**/playwright-report
+.git
+*.db

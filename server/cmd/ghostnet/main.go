@@ -64,7 +64,13 @@ func usage() {
 
 func cmdServe(args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	addr := fs.String("addr", ":8080", "listen address")
+	// Default the listen address from $PORT when set (cloud hosts like Render,
+	// Fly and Railway inject it), falling back to :8080 for local runs.
+	defaultAddr := ":8080"
+	if p := os.Getenv("PORT"); p != "" {
+		defaultAddr = ":" + p
+	}
+	addr := fs.String("addr", defaultAddr, "listen address (defaults to :$PORT when set)")
 	static := fs.String("static", "", "static web client directory")
 	db := fs.String("db", "", "directory for per-game SQLite files")
 	origin := fs.String("origin", "", "comma-separated allowed WS origin hosts")

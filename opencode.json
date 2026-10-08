@@ -1,0 +1,72 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "agent": {
+    "engine": {
+      "description": "Go backend specialist. Owns the deterministic engine, attacker AI, network generator, WS server, journal and report under /server. Keeps the simulation pure and seeded.",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "*": "ask",
+          "cd server && go *": "allow",
+          "cd server && GOTOOLCHAIN=local go *": "allow",
+          "cd server && gofmt *": "allow",
+          "cd server && golangci-lint *": "allow"
+        }
+      }
+    },
+    "frontend": {
+      "description": "TypeScript/Three.js/xterm specialist. Owns the web client under /web: scene, terminal, HUD, replay, menu. Keeps strict types and the neon art direction.",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "*": "ask",
+          "cd web && npm *": "allow",
+          "cd web && npx *": "allow"
+        }
+      }
+    },
+    "redteam": {
+      "description": "Adversary. Read-only on all product code; may ONLY write under test directories. Mission: break the command parser, the WS protocol decoder and the simulation with absurd inputs and edge cases, via Go fuzzing and Playwright. Reports what breaks.",
+      "mode": "subagent",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "ask",
+          "cd server && GOTOOLCHAIN=local go test *": "allow",
+          "cd web && npx playwright *": "allow",
+          "cd web && npx vitest *": "allow"
+        }
+      }
+    },
+    "reviewer": {
+      "description": "Read-only reviewer. Reads diffs and checks them against the invariants in AGENTS.md (determinism, event sourcing, server authority, no panics, offline-playable). Suggests fixes; never edits.",
+      "mode": "subagent",
+      "permission": {
+        "edit": "deny",
+        "bash": { "*": "ask", "git diff*": "allow", "git log*": "allow" }
+      }
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": { "*": "ask" }
+  },
+  "experimental": {
+    "hook": {
+      "file_edited": {
+        "*.go": [
+          { "command": ["bash", "-lc", "cd server && gofmt -w $(git diff --name-only -- '*.go' | sed 's#^server/##') 2>/dev/null; cd server && go vet ./... >/dev/null 2>&1 || true"] }
+        ],
+        "*.ts": [
+          { "command": ["bash", "-lc", "cd web && npx prettier --write \"$0\" >/dev/null 2>&1; npx tsc --noEmit >/dev/null 2>&1 || true", "{file}"] }
+        ]
+      },
+      "session_completed": [
+        { "command": ["bash", "-lc", "echo '[hook] run `make verify` before marking a task done.'"] }
+      ]
+    }
+  }
+}

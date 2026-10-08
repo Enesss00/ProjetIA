@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GHOST NET</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="scanlines"></div>
+    <canvas id="scene"></canvas>
+
+    <!-- MENU -->
+    <section id="menu" class="screen">
+      <div class="menu-card">
+        <h1 class="logo">GHOST<span>NET</span></h1>
+        <p class="tagline">Night-shift network defense. An intruder is already inside.</p>
+        <label class="field">
+          <span>seed</span>
+          <div class="row">
+            <input
+              id="seed-input"
+              type="text"
+              placeholder="e.g. 1337 or any text"
+              autocomplete="off"
+            />
+            <button id="btn-random" class="ghost" title="random seed">⟳</button>
+          </div>
+        </label>
+        <label class="field">
+          <span>attacker</span>
+          <select id="profile-select">
+            <option value="">surprise me</option>
+            <option value="smash">smash &amp; grab (fast, loud)</option>
+            <option value="stealth">stealth (slow, quiet)</option>
+            <option value="apt">APT (patient, methodical)</option>
+          </select>
+        </label>
+        <button id="btn-start" class="primary">ENTER THE SOC</button>
+        <p class="hint">Same seed → same game, every time. Share a seed to duel a friend.</p>
+      </div>
+    </section>
+
+    <!-- GAME HUD -->
+    <section id="game" class="hidden">
+      <div id="hud-top">
+        <div class="hud-chip"><label>time</label><span id="hud-clock">00:00</span></div>
+        <div class="hud-chip"><label>score</label><span id="hud-score">1000</span></div>
+        <div class="hud-chip attacker"><label>attacker</label><span id="hud-profile">—</span></div>
+        <div class="hud-chip exfil">
+          <label>exfiltration</label>
+          <div class="gauge"><div id="hud-exfil-bar"></div></div>
+          <span id="hud-exfil-val">0%</span>
+        </div>
+        <div class="hud-chip"><label>sensors</label><span id="hud-sensors"></span></div>
+        <div class="spacer"></div>
+        <div class="controls">
+          <button id="btn-pause" class="ghost">⏸ pause</button>
+          <button id="spd-1" class="ghost spd active">1×</button>
+          <button id="spd-2" class="ghost spd">2×</button>
+          <button id="spd-4" class="ghost spd">4×</button>
+          <button id="btn-share" class="ghost">⤤ share</button>
+          <span id="status-dot" title="server link"></span>
+        </div>
+      </div>
+
+      <aside id="hud-right">
+        <h2>alert feed</h2>
+        <div id="hud-alerts"></div>
+      </aside>
+
+      <div id="terminal-wrap">
+        <div id="terminal"></div>
+      </div>
+
+      <div id="replay-bar" class="hidden">
+        <span>replay</span>
+        <input id="replay-slider" type="range" min="0" max="6000" value="6000" />
+      </div>
+    </section>
+
+    <!-- END SCREEN -->
+    <section id="end" class="screen hidden">
+      <div class="end-card">
+        <h2 id="end-outcome" class="outcome">—</h2>
+        <div id="end-score" class="end-score"></div>
+        <pre id="end-report"></pre>
+        <div class="row">
+          <button id="btn-replay" class="ghost">⏪ watch replay</button>
+          <button id="btn-again" class="primary">new game</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="toast"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

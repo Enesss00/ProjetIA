@@ -5,6 +5,7 @@ import type { Delta, Ended, Snapshot } from './net/protocol';
 import { CityScene } from './scene/scene';
 import { GameTerminal } from './ui/terminal';
 import { Hud } from './ui/hud';
+import { Audio } from './ui/audio';
 import { parseSeed, seedFromURL } from './ui/util';
 
 function wsURL(): string {
@@ -18,6 +19,7 @@ class App {
   private scene: CityScene;
   private term: GameTerminal | null = null;
   private hud = new Hud();
+  private audio = new Audio();
   private started = false;
   private currentSeed = 0;
   private currentProfile = '';
@@ -65,6 +67,7 @@ class App {
     const seedInput = document.getElementById('seed-input') as HTMLInputElement;
     const profileSel = document.getElementById('profile-select') as HTMLSelectElement;
     document.getElementById('btn-start')!.addEventListener('click', () => {
+      this.audio.resume(); // unlock audio on this user gesture
       const seed = parseSeed(seedInput.value || String(Math.floor(Math.random() * 1e9)));
       this.startGame(seed, profileSel.value);
     });
@@ -92,6 +95,11 @@ class App {
       });
     }
     document.getElementById('btn-share')!.addEventListener('click', () => this.share());
+    const mute = document.getElementById('btn-mute')!;
+    mute.addEventListener('click', () => {
+      this.audio.setMuted(!this.audio.isMuted());
+      mute.textContent = this.audio.isMuted() ? '🔇 sound' : '🔊 sound';
+    });
   }
 
   private startGame(seed: number, profile: string): void {
@@ -106,7 +114,10 @@ class App {
     // real dimensions and renders correctly.
     if (!this.term) {
       this.term = new GameTerminal(document.getElementById('terminal')!, {
-        onCommand: (line) => this.client.command(this.term!.nextCmdId(), line),
+        onCommand: (line) => {
+          this.audio.confirm();
+          this.client.command(this.term!.nextCmdId(), line);
+        },
       });
     }
     this.client.newGame(seed, profile || undefined);
@@ -129,7 +140,25 @@ class App {
   }
 
   private onDelta(d: Delta): void {
+    const lastSeq = this.store.lastSeq;
     this.store.applyDelta(d);
+    // Discreet synthetic cues for notable events in this batch.
+    for (const ev of d.events) {
+      if (ev.seq <= lastSeq) continue;
+      switch (ev.type) {
+        case 'alert':
+          this.audio.alert(ev.n ?? 1);
+          break;
+        case 'atk.own':
+          this.audio.compromise();
+          break;
+        case 'atk.exfil':
+          this.audio.exfil();
+          break;
+        default:
+          break;
+      }
+    }
   }
 
   private onEnded(e: Ended): void {

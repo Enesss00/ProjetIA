@@ -37,12 +37,38 @@ type Session struct {
 	stopped  bool
 	dbPath   string
 	reporter report.Reporter
+	llm      report.Reporter // optional LLM enricher; nil if none
 
 	// idleSince is when the last subscriber left (zero while subscribed).
 	idleSince time.Time
 }
 
-func newSession(token string, n *ClientNewArgs, dbPath string, reporter report.Reporter) (*Session, error) {
+// enrichReport runs the optional LLM reporter off the tick path and, if it
+// produces a different report, stores it and re-broadcasts Ended so the client
+// can upgrade the end screen. Any failure is silently ignored (the template
+// report already shipped).
+func (s *Session) enrichReport(outcome string, score int) {
+	events := s.jnl.All()
+	st := s.jnl.StateAt(-1)
+	enriched := s.llm.Generate(events, st)
+	s.mu.Lock()
+	if enriched == "" || enriched == s.report {
+		s.mu.Unlock()
+		return
+	}
+	s.report = enriched
+	subs := s.snapshotSubs()
+	s.mu.Unlock()
+	msg, err := protocol.Encode(protocol.SEnded, protocol.Ended{Outcome: outcome, Score: score, Report: enriched})
+	if err != nil {
+		return
+	}
+	for _, c := range subs {
+		c.trySend(msg)
+	}
+}
+
+func newSession(token string, n *ClientNewArgs, dbPath string, reporter, llm report.Reporter) (*Session, error) {
 	net := netgen.Generate(n.Seed, netgen.Options{Profile: n.Profile, Workstations: n.Workstations})
 	jnl, err := journal.New(n.Seed, dbPath)
 	if err != nil {
@@ -56,6 +82,7 @@ func newSession(token string, n *ClientNewArgs, dbPath string, reporter report.R
 		stop:      make(chan struct{}),
 		dbPath:    dbPath,
 		reporter:  reporter,
+		llm:       llm,
 		idleSince: time.Now(),
 	}
 	// The engine's event sink records to the journal and fans out to subs.
@@ -109,7 +136,9 @@ func (s *Session) loop() {
 			justEnded := st.Outcome != sim.OutcomeRunning && !s.ended
 			if justEnded {
 				s.ended = true
-				s.report = s.reporter.Generate(s.jnl.All(), st)
+				// Always compute the deterministic template report instantly so
+				// the end screen is never delayed by a network call.
+				s.report = report.Template{}.Generate(s.jnl.All(), st)
 			}
 			subs := s.snapshotSubs()
 			rep := s.report
@@ -135,6 +164,11 @@ func (s *Session) loop() {
 					for _, c := range subs {
 						c.trySend(msg)
 					}
+				}
+				// Optionally enrich the report via an LLM in the background and
+				// re-broadcast when ready. Never blocks the loop.
+				if s.llm != nil {
+					go s.enrichReport(outcome, score)
 				}
 			}
 		}

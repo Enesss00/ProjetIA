@@ -79,12 +79,20 @@ func cmdServe(args []string) error {
 	if *origin != "" {
 		origins = strings.Split(*origin, ",")
 	}
+	var llm report.Reporter
+	if a := report.NewAnthropicFromEnv(); a != nil {
+		llm = a
+		fmt.Println("  LLM report enrichment: enabled (ANTHROPIC_API_KEY set)")
+	} else {
+		fmt.Println("  LLM report enrichment: disabled (deterministic template report)")
+	}
 	hub := server.NewHub(server.Options{
 		Build:       build,
 		DBPath:      *db,
 		StaticDir:   *static,
 		OriginHosts: origins,
 		Reporter:    report.Template{},
+		LLM:         llm,
 	})
 	srv := &http.Server{
 		Addr:              *addr,

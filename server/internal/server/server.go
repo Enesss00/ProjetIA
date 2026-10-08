@@ -23,8 +23,9 @@ type Options struct {
 	Build       string // build string reported in the hello handshake
 	DBPath      string // directory for per-game SQLite files ("" = memory only)
 	Reporter    report.Reporter
-	MaxConns    int // 0 = default
-	MaxGames    int // 0 = default
+	LLM         report.Reporter // optional LLM report enricher; nil disables it
+	MaxConns    int             // 0 = default
+	MaxGames    int             // 0 = default
 	GameTTL     time.Duration
 	StaticDir   string   // directory of the built web client ("" = none)
 	OriginHosts []string // allowed WS origin hosts ("" = same-origin only)
@@ -126,7 +127,7 @@ func (h *Hub) startGame(args *ClientNewArgs) (*Session, error) {
 	if h.opt.DBPath != "" {
 		dbPath = h.opt.DBPath + "/game-" + token + ".db"
 	}
-	sess, err := newSession(token, args, dbPath, h.reporter)
+	sess, err := newSession(token, args, dbPath, h.reporter, h.opt.LLM)
 	if err != nil {
 		return nil, err
 	}

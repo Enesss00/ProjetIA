@@ -2,8 +2,6 @@ module ghostnet
 
 go 1.24.0
 
-toolchain go1.24.7
-
 require (
 	github.com/coder/websocket v1.8.14
 	modernc.org/sqlite v1.39.1

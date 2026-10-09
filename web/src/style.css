@@ -195,6 +195,19 @@ button {
   color: var(--magenta);
   font-size: 14px;
 }
+#hud-atk-state {
+  font-size: 13px;
+}
+#hud-atk-state.atk-good {
+  color: var(--ok);
+}
+#hud-atk-state.atk-bad {
+  color: var(--err);
+  animation: pulse 1s infinite;
+}
+#hud-atk-state.atk-warn {
+  color: var(--warn);
+}
 .hud-chip.exfil {
   min-width: 170px;
 }

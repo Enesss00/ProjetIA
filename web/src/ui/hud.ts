@@ -11,6 +11,7 @@ export class Hud {
   private exfilBar = document.getElementById('hud-exfil-bar')!;
   private exfilVal = document.getElementById('hud-exfil-val')!;
   private profile = document.getElementById('hud-profile')!;
+  private atkState = document.getElementById('hud-atk-state')!;
   private alerts = document.getElementById('hud-alerts')!;
   private sensors = document.getElementById('hud-sensors')!;
   private lastAlertId = 0;
@@ -37,6 +38,27 @@ export class Hud {
     this.exfilVal.textContent = ex + '%';
     this.exfilBar.classList.toggle('danger', ex >= 60);
     this.profile.textContent = s.net.attacker.toUpperCase();
+
+    // Live intruder status so the player always knows what the attacker is
+    // doing — especially when sensors are down or the attacker is contained.
+    const owned = s.net.hosts.filter((h) => s.hosts[h.id]?.compromised).length;
+    let label: string;
+    let cls: string;
+    if (s.atk.gaveUp || s.outcome === 'evicted') {
+      label = '✓ CONTAINED';
+      cls = 'good';
+    } else if (s.atk.action) {
+      label = actionLabel(s.atk.action.kind, s.atk.action.target);
+      cls = 'bad';
+    } else if (owned > 0) {
+      label = `foothold on ${owned} host${owned > 1 ? 's' : ''}`;
+      cls = 'warn';
+    } else {
+      label = 'searching for a way in…';
+      cls = 'warn';
+    }
+    this.atkState.textContent = label;
+    this.atkState.className = 'atk-' + cls;
 
     // Append new alerts (newest on top).
     const list = s.alerts ?? [];
@@ -85,4 +107,26 @@ function esc(s: string): string {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
+}
+
+// actionLabel turns an attacker action into a short human-readable status.
+function actionLabel(kind: string, target: string): string {
+  switch (kind) {
+    case 'recon':
+      return `scanning ${target}`;
+    case 'exploit':
+      return `exploiting ${target}`;
+    case 'bruteforce':
+      return `brute-forcing ${target}`;
+    case 'lateral':
+      return `pivoting to ${target}`;
+    case 'persist':
+      return `entrenching on ${target}`;
+    case 'sensor':
+      return 'disabling sensors';
+    case 'exfil':
+      return `⚠ stealing data (${target})`;
+    default:
+      return kind;
+  }
 }

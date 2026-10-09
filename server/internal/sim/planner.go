@@ -16,13 +16,16 @@ type planner struct {
 
 func newPlanner(profile string, r *rng.RNG) *planner {
 	p := &planner{profile: profile, rng: r}
+	// Patience is how many seconds the attacker keeps probing for a new way in
+	// once fully contained before giving up. Kept short so a player who locks
+	// the attacker out gets a decisive VICTORY quickly instead of dead air.
 	switch profile {
 	case "smash":
-		p.patience = 14
+		p.patience = 5
 	case "stealth":
-		p.patience = 22
+		p.patience = 7
 	default: // apt
-		p.patience = 30
+		p.patience = 8
 	}
 	return p
 }
@@ -44,8 +47,11 @@ func (p *planner) step(e *Engine) {
 	}
 	cands := p.enumerate(st)
 	if len(cands) == 0 {
-		// No move available: the attacker waits a little; if this persists,
-		// it gives up (player has locked everything down).
+		// No move available: the attacker is contained. Make the search for a
+		// new way in VISIBLE (perimeter probing shows in the alert feed, even
+		// if host sensors are down) so the player sees it is winning, then it
+		// gives up and the game ends in a decisive victory.
+		e.emit(Event{Type: EvAlert, Host: "", Text: "attacker probing the perimeter for a new way in — containment holding", N: 1})
 		p.patience--
 		if p.patience <= 0 {
 			e.emit(Event{Type: EvAtkGiveUp})

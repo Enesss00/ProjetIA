@@ -144,6 +144,8 @@ func (e *Engine) resolveAttacker() {
 		e.resolveSensor(a, success, detected)
 	case "exfil":
 		e.resolveExfil(a, success, detected)
+	case "phish":
+		e.resolvePhish(a, success, detected)
 	}
 }
 
@@ -155,7 +157,7 @@ func (e *Engine) actionStillValid(a *AtkAction) bool {
 		return false
 	}
 	switch a.Kind {
-	case "recon", "exploit", "bruteforce", "lateral", "exfil":
+	case "recon", "exploit", "bruteforce", "lateral", "exfil", "phish":
 		if a.Target != "" && !e.st.Up(a.Target) {
 			return false
 		}
@@ -191,6 +193,22 @@ func (e *Engine) resolveInitial(a *AtkAction, success, detected bool) {
 	}
 	if success {
 		e.own(a.Target, a.Source)
+	} else {
+		e.emit(Event{Type: EvAtkFail, Host: a.Target, Text: a.Kind})
+	}
+}
+
+func (e *Engine) resolvePhish(a *AtkAction, success, detected bool) {
+	// Phishing is noisy by nature: a suspicious attachment is a strong signal,
+	// so a successful phish is usually seen — but the attacker is now inside
+	// the corp zone without ever touching the DMZ.
+	if detected {
+		e.alert(a.Target, fmt.Sprintf("phishing: user on %s opened a malicious attachment", a.Target), sev(success), true)
+	} else {
+		e.logLine(a.Target, "email attachment executed by user")
+	}
+	if success {
+		e.own(a.Target, "")
 	} else {
 		e.emit(Event{Type: EvAtkFail, Host: a.Target, Text: a.Kind})
 	}

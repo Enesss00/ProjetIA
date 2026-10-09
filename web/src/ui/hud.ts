@@ -126,6 +126,8 @@ function actionLabel(kind: string, target: string): string {
       return 'disabling sensors';
     case 'exfil':
       return `⚠ stealing data (${target})`;
+    case 'phish':
+      return `phishing a user (${target})`;
     default:
       return kind;
   }

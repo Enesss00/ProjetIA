@@ -96,6 +96,20 @@ func (p *planner) enumerate(st *State) []candidate {
 			out = append(out, p.weigh(st, AtkAction{Kind: kind, Target: h.ID, Source: "", Service: svc}))
 		}
 	}
+	// 2b. Phishing: a parallel entry that BYPASSES the DMZ. The attacker tricks
+	// an employee on an UP, not-yet-owned corp workstation into running a
+	// malicious attachment. This is why isolating the DMZ is never enough —
+	// the attacker can always try to get back in through a careless user, so
+	// the defender must keep watching the whole network, not just the edge.
+	if !st.Blocked[st.Atk.IP] {
+		for i := range st.Net.Hosts {
+			t := &st.Net.Hosts[i]
+			if t.Zone == ZoneCorp && !st.IsOwned(t.ID) && st.Up(t.ID) {
+				out = append(out, p.weigh(st, AtkAction{Kind: "phish", Target: t.ID, Source: ""}))
+			}
+		}
+	}
+
 	// 3. From each foothold: recon + lateral + persist + sensor + exfil.
 	for _, src := range owned {
 		sh, _ := st.Host(src)
@@ -197,6 +211,15 @@ func (p *planner) weigh(st *State, a AtkAction) candidate {
 		w += 2.0
 	case "sensor":
 		w += 0.6 - risk*0.5
+	case "phish":
+		// Phishing is the fallback way in: strongly preferred when the attacker
+		// has no foothold (it has been locked out and needs back in), but
+		// deprioritised when it already holds ground and has better moves.
+		if len(st.Atk.Owned) == 0 {
+			w += 1.4
+		} else {
+			w -= 0.8
+		}
 	}
 	fails := st.Atk.Failures[a.Kind+":"+a.Target]
 	w -= float64(fails) * 0.6
@@ -222,6 +245,8 @@ func (p *planner) odds(st *State, a *AtkAction) (float64, float64) {
 		succ, det = 0.65, 0.4
 	case "exfil":
 		succ, det = 0.8, 0.75
+	case "phish":
+		succ, det = 0.45, 0.6
 	}
 	// Flawed services are easier and quieter to abuse.
 	if h, _ := st.Host(a.Target); h != nil && a.Service != "" {
@@ -268,7 +293,7 @@ func clamp(f float64) float64 {
 func (p *planner) duration(kind string) int {
 	base := map[string]int{
 		"recon": 3, "exploit": 4, "bruteforce": 6, "lateral": 5,
-		"persist": 3, "sensor": 3, "exfil": 4,
+		"persist": 3, "sensor": 3, "exfil": 4, "phish": 5,
 	}[kind]
 	if base == 0 {
 		base = 3

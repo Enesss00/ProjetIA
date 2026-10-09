@@ -12,8 +12,9 @@ Actions are inspired by MITRE ATT&CK tactics:
 | In-game action | ATT&CK tactic | Model effect |
 |----------------|---------------|--------------|
 | `recon` | Reconnaissance (T1595 Active Scanning) | learns a host exists; may raise a low-severity alert (radar sweep in 3D) |
-| `exploit` | Initial Access / Execution (T1190 Exploit Public-Facing App) | compromises a host via a vulnerable service |
+| `exploit` | Initial Access / Execution (T1190 Exploit Public-Facing App) | compromises a DMZ host via a vulnerable service |
 | `bruteforce` | Credential Access (T1110 Brute Force) | compromises a host via a weak credential; noisier |
+| `phish` | Initial Access (T1566 Phishing) | **bypasses the DMZ**: tricks a user into running an attachment, compromising a corp workstation directly from the internet; noisy but needs no exposed service |
 | `lateral` | Lateral Movement (T1021 Remote Services) | pivots from an owned host to a reachable one |
 | `persist` | Persistence (T1053 Scheduled Task) | survives a reboot; defeats `restart` (needs isolate/reimage) |
 | `sensor` | Defense Evasion (T1562 Impair Defenses) | silences a host log agent or blinds a zone IDS |
@@ -34,6 +35,13 @@ So a typical kill chain is `internet → DMZ foothold → SRV (crown jewel) → 
 or it pivots through CORP workstations. The generator guarantees at least one
 viable DMZ entry point and a crackable path to the crown jewel, so every seed is
 winnable *for the attacker* if you do nothing — you must actually defend.
+
+**Phishing is a second, independent front.** Because `phish` compromises a corp
+workstation straight from the internet, sealing the DMZ (isolating/patching the
+edge) never fully contains the attacker: it will try to phish its way back in on
+any workstation that is still up. The attacker is only truly evicted once every
+live entry vector is closed — so the defender must watch the whole network, not
+just the perimeter, which is what makes a single `isolate` no longer end the game.
 
 ## Attacker profiles
 

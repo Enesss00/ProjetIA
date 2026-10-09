@@ -220,6 +220,14 @@ export class CityScene {
       case 'lateral':
         if (source && target) this.spawnBeam(source, target, COLORS.owned, 1.4);
         break;
+      case 'phish':
+        // A phishing beam comes straight from the internet to a workstation,
+        // bypassing the DMZ — a visible second front.
+        if (target) {
+          this.spawnBeam(new THREE.Vector3(-26, 1, -18), target, 0xffd54a, 1.4);
+          this.spawnSweep(target, 0xffd54a);
+        }
+        break;
       case 'exfil':
         if (target) this.spawnBeam(target, new THREE.Vector3(-26, 1, -18), COLORS.jewel, 1.6);
         break;
